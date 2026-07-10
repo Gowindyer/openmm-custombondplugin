@@ -1,0 +1,42 @@
+set(OPENMMCUSTOMBONDCPU_LIBRARY_NAME OpenMMCustomBondCPU)
+
+set(SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomBondCpuKernelFactory.cpp
+    ${CMAKE_SOURCE_DIR}/platforms/reference/src/CustomBondReferenceKernels.cpp
+)
+set(SOURCE_INCLUDE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CustomBondCpuKernelFactory.h
+    ${CMAKE_SOURCE_DIR}/platforms/reference/src/CustomBondReferenceKernels.h
+)
+
+add_library(${OPENMMCUSTOMBONDCPU_LIBRARY_NAME} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES})
+target_include_directories(${OPENMMCUSTOMBONDCPU_LIBRARY_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/openmmapi/include
+        ${CMAKE_SOURCE_DIR}/platforms/reference/src
+        ${OPENMM_INCLUDE_DIR}
+        ${OPENMM_REFERENCE_INCLUDE_DIR}
+        ${OPENMM_CPU_INCLUDE_DIR}
+        ${OPENMM_ASMJIT_INCLUDE_DIR}
+)
+target_compile_definitions(${OPENMMCUSTOMBONDCPU_LIBRARY_NAME} PRIVATE OPENMM_BUILDING_SHARED_LIBRARY)
+target_link_libraries(${OPENMMCUSTOMBONDCPU_LIBRARY_NAME}
+    PRIVATE
+        ${OPENMM_CUSTOMBOND_TARGET}
+        ${OPENMM_LIBRARY}
+        ${OPENMM_CPU_LIBRARY}
+)
+set_target_properties(${OPENMMCUSTOMBONDCPU_LIBRARY_NAME} PROPERTIES
+    BUILD_RPATH "${OPENMM_CUSTOMBOND_PLUGIN_RPATH}"
+    INSTALL_RPATH "${OPENMM_CUSTOMBOND_PLUGIN_RPATH}"
+)
+install(TARGETS ${OPENMMCUSTOMBONDCPU_LIBRARY_NAME}
+    LIBRARY DESTINATION lib/plugins
+    RUNTIME DESTINATION lib/plugins
+    ARCHIVE DESTINATION lib/plugins
+)
+
+if(OPENMM_CUSTOMBOND_BUILD_TESTS AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
