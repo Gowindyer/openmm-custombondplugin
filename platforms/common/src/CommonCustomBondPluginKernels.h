@@ -24,12 +24,16 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomBondPluginForce& force, int firstBond, int lastBond);
 private:
     class ForceInfo;
+    class GlobalParamPreComputation;
     int numBonds;
     bool hasInitializedKernel;
     ComputeContext& cc;
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
+    ComputeArray globalParamValuesArray;
+    std::vector<std::string> globalParamNames;
+    std::vector<double> globalParamValues;
 };
 
 class CommonParallelCalcCustomBondPluginForceKernel : public CalcCustomBondPluginForceKernel {

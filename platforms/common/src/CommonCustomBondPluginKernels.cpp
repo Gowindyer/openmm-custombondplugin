@@ -48,6 +48,33 @@ private:
     const CustomBondPluginForce& force;
 };
 
+class CommonCalcCustomBondPluginForceKernel::GlobalParamPreComputation : public ComputeContext::ForcePreComputation {
+public:
+    GlobalParamPreComputation(ComputeContext& cc, vector<string>& paramNames, vector<double>& paramValues, ComputeArray& paramValuesArray, int forceGroup) :
+            cc(cc), paramNames(paramNames), paramValues(paramValues), paramValuesArray(paramValuesArray), forceGroup(forceGroup) {
+    }
+    void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        if ((groups&(1<<forceGroup)) == 0)
+            return;
+        bool changed = false;
+        for (int i = 0; i < (int) paramNames.size(); i++) {
+            double value = cc.getContextImpl()->getParameter(paramNames[i]);
+            if (value != paramValues[i]) {
+                paramValues[i] = value;
+                changed = true;
+            }
+        }
+        if (changed)
+            paramValuesArray.upload(paramValues, true);
+    }
+private:
+    ComputeContext& cc;
+    vector<string>& paramNames;
+    vector<double>& paramValues;
+    ComputeArray& paramValuesArray;
+    int forceGroup;
+};
+
 CommonCalcCustomBondPluginForceKernel::~CommonCalcCustomBondPluginForceKernel() {
     ContextSelector selector(cc);
     if (params != NULL)
@@ -84,11 +111,20 @@ void CommonCalcCustomBondPluginForceKernel::initialize(const System& system, con
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "real");
+        int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        globalParamValuesArray.initialize(cc, force.getNumGlobalParameters(), elementSize, "customBondPluginGlobalParams");
+        globalParamNames.resize(force.getNumGlobalParameters());
+        globalParamValues.resize(force.getNumGlobalParameters());
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            globalParamNames[i] = force.getGlobalParameterName(i);
+            globalParamValues[i] = force.getGlobalParameterDefaultValue(i);
+        }
+        globalParamValuesArray.upload(globalParamValues, true);
+        cc.addPreComputation(new GlobalParamPreComputation(cc, globalParamNames, globalParamValues, globalParamValuesArray, force.getForceGroup()));
+        string argName = cc.getBondedUtilities().addArgument(globalParamValuesArray, "real");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            int index = cc.registerGlobalParam(name);
-            string value = argName+"["+cc.intToString(index)+"]";
+            string value = argName+"["+cc.intToString(i)+"]";
             variables[name] = value;
         }
     }

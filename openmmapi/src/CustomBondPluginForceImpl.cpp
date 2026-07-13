@@ -31,6 +31,7 @@
 #include "openmm/CustomBondPluginKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomBondPluginForceImpl.h"
+#include <set>
 #include <sstream>
 
 using namespace OpenMM;
