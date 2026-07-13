@@ -19,6 +19,14 @@
 using namespace OpenMM;
 using namespace std;
 
+static ContextImpl& getContextImplReference(ContextImpl& context) {
+    return context;
+}
+
+static ContextImpl& getContextImplReference(ContextImpl* context) {
+    return *context;
+}
+
 class CommonCalcCustomBondPluginForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(const CustomBondPluginForce& force) : force(force) {
@@ -58,7 +66,7 @@ public:
             return;
         bool changed = false;
         for (int i = 0; i < (int) paramNames.size(); i++) {
-            double value = cc.getContextImpl()->getParameter(paramNames[i]);
+            double value = getContextImplReference(cc.getContextImpl()).getParameter(paramNames[i]);
             if (value != paramValues[i]) {
                 paramValues[i] = value;
                 changed = true;
